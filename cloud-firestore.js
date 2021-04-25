@@ -4,6 +4,8 @@ const cors = require('cors')
 const firebase = require('firebase/app')
 require('firebase/firestore')
 
+const data = require('./fixtures/10000-records.json')
+
 firebase.initializeApp({
   apiKey: 'AIzaSyD4jflY1oe2KLDz43IIq90UGuggBkkaDdE',
   authDomain: 'todo-81657.firebaseapp.com',
@@ -12,6 +14,17 @@ firebase.initializeApp({
   messagingSenderId: '150929684776',
   appId: '1:150929684776:web:c3a70c48e6d86c3b46781d',
 })
+
+/////////////////////////////
+
+function splitBy(size, list) {
+  return list.reduce((acc, curr, i, self) => {
+    if (!(i % size)) {
+      return [...acc, self.slice(i, i + size)]
+    }
+    return acc
+  }, [])
+}
 
 /////////////////////////////
 
@@ -91,6 +104,49 @@ app.delete('/items/:id/', async function (req, res) {
   // ---
   try {
     await firebase.firestore().collection('items').doc(req.params.id).delete()
+    // ---
+    const hrend = process.hrtime(hrstart)
+    console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
+    return res.status(200).json()
+  } catch (error) {
+    return res.status(500).json(error)
+  }
+})
+
+app.post('/items-many/', async function (_, res) {
+  const hrstart = process.hrtime()
+  // ---
+  try {
+    // slow
+    // for (const item of JSON.parse(data)) {
+    //   await firebase.firestore().collection('items').add(item)
+    // }
+    const items = splitBy(500, JSON.parse(data))
+    for (let item of items) {
+      const batch = firebase.firestore().batch()
+      item.forEach(item => {
+        const itemRef = firebase.firestore().collection('items').doc()
+        batch.set(itemRef, item)
+      })
+      await batch.commit()
+    }
+
+    // ---
+    const hrend = process.hrtime(hrstart)
+    console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
+    return res.status(200).json()
+  } catch (error) {
+    console.log({ error })
+    return res.status(500).json(error)
+  }
+})
+
+app.delete('/items-many/', async function (_, res) {
+  const hrstart = process.hrtime()
+  // ---
+  try {
+    const items = await firebase.firestore().collection('items').get()
+    items.forEach(item => item.ref.delete())
     // ---
     const hrend = process.hrtime(hrstart)
     console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)

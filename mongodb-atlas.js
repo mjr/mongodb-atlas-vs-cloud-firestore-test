@@ -3,6 +3,8 @@ const cors = require('cors')
 
 const mongoose = require('mongoose')
 
+const data = require('./fixtures/10000-records.json')
+
 mongoose.connect(
   'mongodb+srv://emerald:pM2LwW96knq5Hoy6@cluster0.vpnba.mongodb.net/todo',
   {
@@ -108,6 +110,37 @@ app.delete('/items/:id/', async function (req, res) {
     const hrend = process.hrtime(hrstart)
     console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
     if (!item) return res.status(404).json({ detail: 'Not found' })
+    return res.status(200).json()
+  } catch (error) {
+    return res.status(500).json(error)
+  }
+})
+
+app.post('/items-many/', async function (_, res) {
+  const hrstart = process.hrtime()
+  // ---
+  try {
+    // slow
+    // await Item.create(JSON.parse(data));
+
+    await Item.insertMany(JSON.parse(data))
+    // ---
+    const hrend = process.hrtime(hrstart)
+    console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
+    return res.status(200).json()
+  } catch (error) {
+    return res.status(500).json(error)
+  }
+})
+
+app.delete('/items-many/', async function (_, res) {
+  const hrstart = process.hrtime()
+  // ---
+  try {
+    await Item.deleteMany()
+    // ---
+    const hrend = process.hrtime(hrstart)
+    console.info('Execution time (hr): %ds %dms', hrend[0], hrend[1] / 1000000)
     return res.status(200).json()
   } catch (error) {
     return res.status(500).json(error)
